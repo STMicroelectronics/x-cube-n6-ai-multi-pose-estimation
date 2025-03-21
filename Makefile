@@ -46,13 +46,13 @@ BUILD_DIR = build
 # C sources
 C_SOURCES += Src/main.c
 C_SOURCES += Src/app.c
-C_SOURCES += Src/app_postprocess.c
+C_SOURCES += Src/pkf.c
 C_SOURCES += Src/app_fuseprogramming.c
 C_SOURCES += Src/stm32_lcd_ex.c
 C_SOURCES += Src/stm32n6xx_it.c
 C_SOURCES += Model/network.c
 C_SOURCES += Src/app_cam.c
-C_SOURCES += Src/threadx_hal.c
+C_SOURCES += Src/freertos_bsp.c
 
 # ASM sources
 ASM_SOURCES =
@@ -139,9 +139,10 @@ all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET
 include mks/fw.mk
 include mks/ai.mk
 include mks/cmw.mk
-include mks/threadx.mk
+include mks/freertos.mk
 include mks/gcc.mk
 include mks/iar.mk
+include Lib/tracker/tracker.mk
 
 #######################################
 # build the application

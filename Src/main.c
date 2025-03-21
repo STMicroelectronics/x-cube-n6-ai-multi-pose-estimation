@@ -29,13 +29,13 @@
 #include "stm32n6570_discovery_xspi.h"
 #include <stdio.h>
 #include "stm32n6xx_hal_rif.h"
-#include "tx_api.h"
-#include "tx_initialize.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 UART_HandleTypeDef huart1;
 
-static TX_THREAD main_thread;
-static uint8_t main_tread_stack[4096];
+static StaticTask_t main_thread;
+static StackType_t main_thread_stack[configMINIMAL_STACK_SIZE];
 
 static void SystemClock_Config(void);
 static void NPURam_enable();
@@ -43,8 +43,11 @@ static void NPUCache_config();
 static void Security_Config();
 static void IAC_Config();
 static void CONSOLE_Config(void);
-static int main_threadx(void);
-static void main_thread_fct(ULONG arg);
+static int main_freertos(void);
+static void main_thread_fct(void *arg);
+
+/* This is defined in port.c */
+void vPortSetupTimerInterrupt(void);
 
 /**
   * @brief  Main program
@@ -70,18 +73,7 @@ int main(void)
   SCB_EnableDCache();
 #endif
 
-  return main_threadx();
-}
-
-void tx_application_define(void *first_unused_memory)
-{
-  const UINT priority = TX_MAX_PRIORITIES - 1;
-  const ULONG time_slice = 10;
-  int ret;
-
-  ret = tx_thread_create(&main_thread, "main", main_thread_fct, 0, main_tread_stack,
-                         sizeof(main_tread_stack), priority, priority, time_slice, TX_AUTO_START);
-  assert(ret == 0);
+  return main_freertos();
 }
 
 static void NPURam_enable()
@@ -284,18 +276,38 @@ static void CONSOLE_Config()
   }
 }
 
-static int main_threadx()
+static int main_freertos()
 {
-  _tx_initialize_kernel_setup();
-  tx_kernel_enter();
+  TaskHandle_t hdl;
+
+  hdl = xTaskCreateStatic(main_thread_fct, "main", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1,
+                          main_thread_stack, &main_thread);
+  assert(hdl != NULL);
+
+  vTaskStartScheduler();
   assert(0);
 
   return -1;
 }
 
-static void main_thread_fct(ULONG arg)
+static void main_thread_fct(void *arg)
 {
+  uint32_t preemptPriority;
+  uint32_t subPriority;
+  IRQn_Type i;
+
+  /* Copy SysTick_IRQn priority set by RTOS and use it as default priorities for IRQs. We are now sure that all irqs
+   * have default priority below or equal to configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY.
+   */
+  HAL_NVIC_GetPriority(SysTick_IRQn, HAL_NVIC_GetPriorityGrouping(), &preemptPriority, &subPriority);
+  for (i = PVD_PVM_IRQn; i <= LTDC_UP_ERR_IRQn; i++)
+    HAL_NVIC_SetPriority(i, preemptPriority, subPriority);
+
+  /* Call SystemClock_Config() after vTaskStartScheduler() since it call HAL_Delay() which call vTaskDelay(). Drawback
+   * is that we must call vPortSetupTimerInterrupt() since SystemCoreClock value has been modified by SystemClock_Config()
+   */
   SystemClock_Config();
+  vPortSetupTimerInterrupt();
 
   CONSOLE_Config();
 
@@ -338,6 +350,8 @@ static void main_thread_fct(ULONG arg)
   LL_MISC_EnableClockLowPower(~0);
 
   app_run();
+
+  vTaskDelete(NULL);
 }
 
 HAL_StatusTypeDef MX_DCMIPP_ClockConfig(DCMIPP_HandleTypeDef *hdcmipp)

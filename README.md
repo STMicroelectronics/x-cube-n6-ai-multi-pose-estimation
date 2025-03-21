@@ -6,6 +6,8 @@ User should fetch yolov8 pose estimation model and deploy it for STM32N6570 NPU.
 
 This top readme gives an overview of the app. Additional documentation is available in the [Doc](./Doc/) folder.
 
+![Screenshot of application running](_htmresc/screenshot.png)
+
 ## Doc Folder Content
 
 - [Download and deploy yolov8 pose estimation model](Doc/Download-and-deploy-model.md)
@@ -15,7 +17,8 @@ This top readme gives an overview of the app. Additional documentation is availa
 
 ## Features Demonstrated in This Example
 
-- Multi-threaded application flow (Azure RTOS ThreadX)
+- Multi-threaded application flow (FreeRTOS)
+- Tracking and box/keypoints filtering (USER1 button enable/disable tracking/filtering feature)
 - NPU accelerated quantized AI model inference
 - Dual DCMIPP pipes
 - DCMIPP crop, decimation, downscale
@@ -26,14 +29,14 @@ This top readme gives an overview of the app. Additional documentation is availa
 
 ## Hardware Support
 
-- MB1939 STM32N6570-DK REV C01
+- MB1939 STM32N6570-DK
   - The board should be connected to the onboard ST-LINK debug adapter CN6 with a __USB-C to USB-C cable to ensure sufficient power__
   - OTP fuses are set in this example for xSPI IOs to get the maximum speed (200MHz) on xSPI interfaces.
 
 - 3 Cameras are supported:
   - MB1854B IMX335 (Default Camera provided with the MB1939 STM32N6570-DK board)
-  - STEVAL-55G1MBI VD55G1 Camera module
-  - STEVAL-66GYMAI VD66GY Camera module
+  - STEVAL-55G1MBI VD55G1 Camera module (Use the CSI-2 cable provided with the camera module)
+  - STEVAL-66GYMAI VD66GY Camera module (Use the CSI-2 cable provided with the camera module)
 
 ![Board](_htmresc/ImageBoard.JPG)
 
@@ -42,9 +45,9 @@ STM32N6570-DK board with MB1854B IMX335.
 ## Tools Version
 
 - IAR Embedded Workbench for Arm (**EWARM 9.40.1**) + N6 patch ([**EWARMv9_STM32N6xx_V1.0.0**](STM32Cube_FW_N6/Utilities/PC_Software/EWARMv9_STM32N6xx_V1.0.0.zip))
-- STM32CubeIDE (**STM32CubeIDE 1.17.0**)
-- STM32CubeProgrammer (**v2.18.0**)
-- [STEdgeAI](https://www.st.com/en/development-tools/stedgeai-core.html) (**v2.0.0**)
+- [STM32CubeIDE](https://www.st.com/content/st_com/en/products/development-tools/software-development-tools/stm32-software-development-tools/stm32-ides/stm32cubeide.html) (**STM32CubeIDE 1.17.0**)
+- [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) (**v2.18.0**)
+- [STEdgeAI](https://www.st.com/en/development-tools/stedgeai-core.html) (**v2.1.0**)
 
 ## Boot Modes
 
@@ -52,8 +55,15 @@ The STM32N6 does not have any internal flash. To retain your firmware after a re
 Alternatively, you can load your firmware directly from SRAM (dev mode). However, in dev mode, if you turn off the board, your program will be lost.
 
 __Boot modes:__
-- Dev mode: load firmware from debug session in RAM (boot switch to the right)
-- Boot from flash: Program firmware in external flash (boot switch to the left)
+- Dev mode (Both boot switches to the right): load firmware from debug session in RAM, program firmware in external flash
+- Boot from flash (Both boot switches to the left)
+
+## Console parameters
+
+You can see application messages by attaching a console application to the ST-Link console output. Use the following console parameters:
+- Baud rate of 115200 bps.
+- No parity.
+- One stop bit.
 
 ## Quickstart Using Prebuilt Binaries
 
@@ -61,12 +71,12 @@ __Boot modes:__
 
 Three binaries must be programmed into the board's external flash using the following procedure:
 
-  1. Switch the BOOT1 switch to the right position.
+  1. Set both switches to the right side.
   2. Program `Binary/ai_fsbl.hex` (To be done once) (First stage boot loader).
   3. Program `Binary/network_data.hex` (parameters of the networks; To be changed only when the network is changed).
   4. Program `Binary/x-cube-n6-ai-multi-pose-estimation.hex` (firmware application).
-  5. Switch the BOOT1 switch to the left position.
-  6. Perform a power down/up sequence.
+  5. Set both switches to the left side.
+  6. Power cycle the board.
 
 ### How to Program Hex Files Using STM32CubeProgrammer UI
 
@@ -96,7 +106,7 @@ pose estimation model and then flash weights.
 
 ### Application Build and Run - Dev Mode
 
-__Make sure to have the switch to the right side.__
+__Make sure to have both switches to the right side.__
 
 #### STM32CubeIDE
 
@@ -134,7 +144,7 @@ $ arm-none-eabi-gdb build/Project.elf
 
 ### Application Build and Run - Boot from Flash
 
-__Make sure to have the switch on the right side.__
+__Make sure to have both switches to the right side.__
 
 #### STM32CubeIDE
 
@@ -154,7 +164,7 @@ Before running the commands below, be sure to have them in your PATH.
 make -j8
 ```
 
-Once your app is built with Makefile, STM32CubeIDE, or EWARM, you can add a signature to the bin file:
+Once your app is built with Makefile, STM32CubeIDE, or EWARM, you must add a signature to the bin file:
 ```bash
 STM32_SigningTool_CLI -bin build/Project.bin -nk -t ssbl -hv 2.3 -o build/Project_sign.bin
 ```
@@ -169,5 +179,9 @@ STM32_Programmer_CLI -c port=SWD mode=HOTPLUG -el $DKEL -hardRst -w build/Projec
 ```
 
 Note: Only the App binary needs to be programmed if the FSBL and network_data.hex were previously programmed.
+
+__Set both switches to the left side.__
+
+Do a power cycle to boot from the external flash.
 
 ## Known Issues and Limitations
