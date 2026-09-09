@@ -166,9 +166,18 @@ Before running the commands below, be sure to have them in your PATH.
 make -j8
 ```
 
-Once your app is built with Makefile, STM32CubeIDE, or EWARM, you must add a signature to the bin file:
+Once your app is built with Makefile, STM32CubeIDE, or EWARM, you must add a signature to the bin file/
+
+Using STM32CubeProgrammer before v2.21:
+
 ```bash
 STM32_SigningTool_CLI -bin build/Project.bin -nk -t ssbl -hv 2.3 -o build/Project_sign.bin
+```
+
+Using STM32CubeProgrammer v2.21 or later:
+
+```bash
+STM32_SigningTool_CLI -bin build/Project.bin -nk -t ssbl -hv 2.3 --align -o build/Project_sign.bin
 ```
 
 You can program the FSBL, the signed bin file at the address `0x70100000` and the network parameters:

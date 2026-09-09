@@ -43,6 +43,10 @@ This application is prebuilt with a multi pose estimation model "YOLOv8 pose mod
 
 ## Update history
 
+### v2.2.1 / September 2026
+
+- Fix STM32_SigningTool_CLI API break since v2.21 by adding `--align` flag
+
 ### V2.2.0 / January 2026
 
 - Update STEdgeAI to `v3.0.0` (incl. STM32Cube.AI runtime `v11.0.0`)
